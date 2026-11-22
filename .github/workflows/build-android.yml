@@ -1,0 +1,86 @@
+name: Build AirMouse Android Debug APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-debug-apk:
+    name: Test & Build Debug APK (API 34–36)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK Platform 36 & Build Tools
+        run: |
+          set -euo pipefail
+          (yes || true) | sdkmanager --licenses >/dev/null
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Verify Gradle wrapper & set executable permission
+        run: |
+          set -euo pipefail
+          if [ ! -f "./gradlew" ] || [ ! -f "./gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "::error::Gradle wrapper files (gradlew and gradle/wrapper/gradle-wrapper.jar) are required."
+            exit 1
+          fi
+          chmod +x ./gradlew
+
+      - name: Set up Gradle caching
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run Gradle unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Assemble Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Verify generated Debug APK
+        id: verify-apk
+        run: |
+          set -euo pipefail
+          APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -s "$APK_PATH" ]; then
+            echo "::error::Expected debug APK was not generated at $APK_PATH"
+            exit 1
+          fi
+          APK_SIZE=$(du -h "$APK_PATH" | cut -f1)
+          APK_SHA256=$(sha256sum "$APK_PATH" | awk '{print $1}')
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+          {
+            echo "### AirMouse HID Test — Debug APK Build Succeeded"
+            echo ""
+            echo "- **Artifact Name:** \`AirMouse-Debug-APK\`"
+            echo "- **APK File:** \`$APK_PATH\`"
+            echo "- **File Size:** \`$APK_SIZE\`"
+            echo "- **SHA-256:** \`$APK_SHA256\`"
+            echo "- **Min SDK / Target SDK:** Android 14 (API 34) / Android 16 (API 36)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload AirMouse Debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AirMouse-Debug-APK
+          path: ${{ steps.verify-apk.outputs.apk_path }}
+          retention-days: 14
+          if-no-files-found: error

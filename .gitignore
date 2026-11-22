@@ -1,5 +1,20 @@
-node_modules/
+# Android & Gradle build outputs
+.gradle/
+app/build/
 build/
+local.properties
+*.iml
+.idea/
+captures/
+.cxx/
+*.apk
+*.aab
+
+# Keep Gradle Wrapper tracked for zero-setup GitHub Actions builds
+!gradle/wrapper/gradle-wrapper.jar
+
+# Node / workspace tooling
+node_modules/
 dist/
 coverage/
 .DS_Store
