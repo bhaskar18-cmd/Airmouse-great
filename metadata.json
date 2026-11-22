@@ -1,0 +1,6 @@
+{
+  "name": "AirMouse HID Test",
+  "description": "Native Android (Kotlin) Bluetooth HID Mouse diagnostic and touchpad project targeting Android 14–16 (API 34–36).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
